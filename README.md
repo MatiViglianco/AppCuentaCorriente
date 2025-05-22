@@ -89,7 +89,7 @@ Si deseas generar una versión optimizada para producción (archivos estáticos 
 
 ## Estructura del Proyecto (Simplificada)
 
-
+```
 /
 ├── public/               # Archivos estáticos públicos
 ├── src/
@@ -112,7 +112,7 @@ Si deseas generar una versión optimizada para producción (archivos estáticos 
 ├── tailwind.config.js    # Configuración de Tailwind CSS
 ├── tsconfig.json         # Configuración de TypeScript
 └── README.md             # Este archivo
-
+```
 
 ## Posibles Mejoras Futuras
 
