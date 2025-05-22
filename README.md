@@ -1,54 +1,131 @@
-# React + TypeScript + Vite
+# AppCuentaCorriente - Sistema de Gestión de Cuentas Corrientes
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación web simple para la gestión de cuentas corrientes de clientes, permitiendo registrar clientes, transacciones (gastos/compras), y llevar un control de los saldos pendientes. La aplicación utiliza el `localStorage` del navegador para persistir los datos.
 
-Currently, two official plugins are available:
+## Funcionalidades Principales
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+* **Gestión de Clientes:**
+    * Crear nuevos clientes (Apellido, Nombre, Teléfono opcional).
+    * Editar la información de clientes existentes.
+    * Eliminar clientes (esto también eliminará sus transacciones asociadas).
+    * Listar y buscar clientes.
+    * Ordenar clientes por Apellido/Nombre o por Deuda.
+    * Paginación para la lista de clientes (15 clientes por página).
+    * Enviar mensaje de recordatorio de deuda por WhatsApp a clientes con teléfono registrado.
+* **Gestión de Transacciones:**
+    * Registrar nuevas transacciones (gastos/compras) para un cliente seleccionado (Monto, Descripción opcional, Fecha).
+    * Visualizar transacciones agrupadas por mes.
+    * Registrar pagos parciales o totales para las transacciones.
+    * Filtrar transacciones por estado: Todos, Activo, Parcialmente Pagado, Vencido, Pagado.
+    * Paginación para la lista de transacciones (15 transacciones por página).
+    * Las transacciones se marcan como "Vencidas" automáticamente si su fecha es anterior al mes actual y no están completamente pagadas.
+* **Interfaz de Usuario:**
+    * Diseño responsivo.
+    * Modales para la creación y edición de clientes, y para el registro de transacciones y pagos.
+    * Modales de confirmación para acciones destructivas (eliminar cliente).
+    * Fondo con gradiente radial y patrón de puntos.
 
-## Expanding the ESLint configuration
+## Tecnologías y Librerías Utilizadas
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+* **React:** Biblioteca principal para la construcción de la interfaz de usuario.
+* **Vite:** Herramienta de frontend para un desarrollo y build rápidos.
+* **TypeScript:** Superset de JavaScript para tipado estático.
+* **Tailwind CSS:** Framework CSS utility-first para el diseño de la interfaz.
+* **Lucide React:** Biblioteca de íconos SVG.
+* **LocalStorage:** Para el almacenamiento de datos en el navegador del cliente.
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+## Despliegue y Uso
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Esta aplicación está diseñada para ejecutarse localmente en el navegador y utiliza `localStorage` para guardar los datos. No requiere un backend complejo para su funcionamiento básico.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Prerrequisitos
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+* Node.js (que incluye npm o yarn) instalado en tu sistema.
+* Git (opcional, si clonas el repositorio).
+
+### Pasos para Ejecutar Localmente
+
+1.  **Clonar el Repositorio (si aplica):**
+    ```bash
+    git clone [https://github.com/TU_USUARIO/AppCuentaCorriente.git](https://github.com/TU_USUARIO/AppCuentaCorriente.git)
+    cd AppCuentaCorriente
+    ```
+    O si ya tienes los archivos, navega a la carpeta raíz del proyecto (`carnicuenta-vite-project`).
+
+2.  **Instalar Dependencias:**
+    Abre una terminal en la carpeta raíz del proyecto y ejecuta:
+    ```bash
+    npm install
+    ```
+    o si usas yarn:
+    ```bash
+    yarn install
+    ```
+
+3.  **Iniciar el Servidor de Desarrollo:**
+    Una vez instaladas las dependencias, puedes iniciar la aplicación en modo de desarrollo:
+    ```bash
+    npm run dev
+    ```
+    o con yarn:
+    ```bash
+    yarn dev
+    ```
+    Esto generalmente abrirá la aplicación en tu navegador en una dirección como `http://localhost:5173` (el puerto puede variar).
+
+### Build para Producción (Opcional)
+
+Si deseas generar una versión optimizada para producción (archivos estáticos que puedes desplegar en cualquier servidor web o servicio de hosting de sitios estáticos):
+
+1.  **Ejecutar el Comando de Build:**
+    ```bash
+    npm run build
+    ```
+    o con yarn:
+    ```bash
+    yarn build
+    ```
+2.  Los archivos generados se encontrarán en la carpeta `dist`. Puedes subir el contenido de esta carpeta a tu servicio de hosting preferido (ej. Netlify, Vercel, GitHub Pages, Firebase Hosting, etc.).
+
+## Estructura del Proyecto (Simplificada)
+
+
+/
+├── public/               # Archivos estáticos públicos
+├── src/
+│   ├── api/              # (No usado actualmente, para futuras integraciones)
+│   ├── assets/           # Recursos como imágenes (si los hubiera)
+│   ├── components/       # Componentes reutilizables de la UI
+│   │   ├── cliente/      # Componentes específicos para clientes
+│   │   ├── layout/       # Componentes de estructura (Header, Footer)
+│   │   ├── transaccion/  # Componentes específicos para transacciones
+│   │   └── ui/           # Componentes genéricos de UI (Modales, Paginación)
+│   ├── hooks/            # Hooks personalizados (useClientes, useTransacciones)
+│   ├── pages/            # Componentes de página principal (GestorCuentasPage)
+│   ├── services/         # Lógica de interacción con localStorage (clienteService, transaccionService)
+│   ├── styles/           # Archivos CSS globales (index.css con directivas de Tailwind)
+│   ├── App.tsx           # Componente raíz de la aplicación
+│   └── main.tsx          # Punto de entrada de la aplicación React
+├── .gitignore            # Archivos y carpetas ignorados por Git
+├── index.html            # HTML principal
+├── package.json          # Dependencias y scripts del proyecto
+├── tailwind.config.js    # Configuración de Tailwind CSS
+├── tsconfig.json         # Configuración de TypeScript
+└── README.md             # Este archivo
+
+
+## Posibles Mejoras Futuras
+
+* Integración con un backend real para persistencia de datos más robusta y multiusuario.
+* Autenticación de usuarios.
+* Mejoras en la interfaz de usuario y experiencia de usuario.
+* Generación de reportes o exportación de datos.
+* Notificaciones más avanzadas.
+
+## Contribuciones
+
+Las contribuciones son bienvenidas. Por favor, abre un issue para discutir cambios mayores o envía un Pull Request.
+
+---
+
+Creado para la gestión de cuentas corrientes.
