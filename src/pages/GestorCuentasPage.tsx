@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useClientes } from '../hooks/useClientes';
 import { useTransacciones } from '../hooks/useTransacciones';
 import { ClienteForm } from '../components/cliente/ClienteForm';
@@ -13,6 +13,7 @@ import { PaymentModal } from '../components/transaccion/PaymentModal';
 import { PaginationControls } from '../components/ui/PaginationControls'; 
 import type { Cliente } from '../services/clienteService';
 import type { Transaccion } from '../services/transaccionService';
+import { Upload, Download } from 'lucide-react'; 
 
 type FiltroEstado = 'todos' | 'activo' | 'vencido' | 'pagado' | 'parcialmente_pagado'; 
 
@@ -22,6 +23,7 @@ const TRANSACCIONES_PER_PAGE = 15;
 export const GestorCuentasPage: React.FC = () => {
   const {
     clientes, 
+    setClientes,
     agregarCliente: agregarNuevoClienteHook,
     actualizarCliente: actualizarClienteHook, 
     eliminarCliente: eliminarClienteHook,     
@@ -35,6 +37,7 @@ export const GestorCuentasPage: React.FC = () => {
 
   const {
     transacciones: allTransacciones, 
+    setTransacciones,
     agregarTransaccion: agregarNuevaTransaccionHook,
     registrarPago: registrarPagoHook, 
     marcarComoTotalmentePagado, 
@@ -62,6 +65,8 @@ export const GestorCuentasPage: React.FC = () => {
 
   const [currentPageClientes, setCurrentPageClientes] = useState(1);
   const [currentPageTransacciones, setCurrentPageTransacciones] = useState(1);
+
+  const inputFileRef = useRef<HTMLInputElement>(null); 
 
 
   const listaClientesFiltradaYOrdenada = useMemo(() => {
@@ -233,7 +238,68 @@ export const GestorCuentasPage: React.FC = () => {
     }
 
     const urlWhatsApp = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
-    window.open(urlWhatsApp, '_blank'); // Reverted to _blank
+    window.open(urlWhatsApp, '_blank'); 
+  };
+
+  const handleExportarDatos = () => {
+    try {
+        const datosParaExportar = {
+            clientes: clientes,
+            transacciones: allTransacciones,
+        };
+        const jsonString = JSON.stringify(datosParaExportar, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const href = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = href;
+        link.download = 'carnicuenta-datos.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(href);
+        alert('Datos exportados exitosamente como carnicuenta-datos.json');
+    } catch (error) {
+        console.error("Error al exportar datos:", error);
+        alert('Error al exportar datos. Ver la consola para más detalles.');
+    }
+  };
+
+  const handleImportarDatos = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const text = e.target?.result;
+            if (typeof text === 'string') {
+                const datosImportados = JSON.parse(text);
+
+                if (Array.isArray(datosImportados.clientes) && Array.isArray(datosImportados.transacciones)) {
+                    if (window.confirm('¿Estás seguro de que deseas importar estos datos? Esto sobrescribirá los datos actuales.')) {
+                        setClientes(datosImportados.clientes);
+                        setTransacciones(datosImportados.transacciones);
+                        setClienteSeleccionado(null); 
+                        setCurrentPageClientes(1);
+                        setCurrentPageTransacciones(1);
+                        alert('Datos importados exitosamente.');
+                    }
+                } else {
+                    alert('El archivo JSON no tiene el formato esperado (necesita un objeto con "clientes" y "transacciones" como arrays).');
+                }
+            }
+        } catch (error) {
+            console.error("Error al importar datos:", error);
+            alert('Error al importar datos. Asegúrate de que el archivo es un JSON válido. Ver la consola para más detalles.');
+        } finally {
+             if (inputFileRef.current) {
+                inputFileRef.current.value = "";
+             }
+        }
+    };
+    reader.readAsText(file);
   };
 
 
@@ -242,6 +308,35 @@ export const GestorCuentasPage: React.FC = () => {
       <div className="fixed inset-0 -z-10 h-screen w-screen bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
       <Header title="Sistema de Cuentas Corrientes Carnicuenta" />
       <main className="container mx-auto p-4 flex-grow w-full z-10"> 
+        
+        <div className="mb-6 p-4 bg-slate-50 rounded-lg shadow">
+            <h3 className="text-lg font-semibold text-gray-700 mb-3">Gestión de Datos (LocalStorage)</h3>
+            <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                    onClick={handleExportarDatos}
+                    className="flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors text-sm"
+                >
+                    <Download size={18}/> Exportar Datos
+                </button>
+                <button
+                    onClick={() => inputFileRef.current?.click()}
+                    className="flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors text-sm"
+                >
+                   <Upload size={18}/> Importar Datos
+                </button>
+                <input
+                    type="file"
+                    accept=".json"
+                    ref={inputFileRef}
+                    onChange={handleImportarDatos}
+                    className="hidden"
+                />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+                Exporta tus datos actuales a un archivo JSON o importa datos desde un archivo JSON previamente guardado. La importación sobrescribirá los datos existentes.
+            </p>
+        </div>
+
         <div className="flex flex-col md:flex-row gap-6">
           <div className="md:w-1/3 bg-white p-4 rounded-lg shadow-lg flex flex-col"> 
             <div className="flex justify-between items-center mb-4">

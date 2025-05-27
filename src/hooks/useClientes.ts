@@ -69,7 +69,7 @@ export const useClientes = () => {
 
   return {
     clientes,
-    setClientes,
+    setClientes, 
     agregarCliente,
     actualizarCliente, 
     eliminarCliente,   

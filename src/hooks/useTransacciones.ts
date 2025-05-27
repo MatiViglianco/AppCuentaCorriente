@@ -10,52 +10,6 @@ import {
 export const useTransacciones = () => {
   const [transacciones, setTransacciones] = useState<Transaccion[]>(() => getTransaccionesFromStorage());
 
-  useEffect(() => {
-    saveTransaccionesToStorage(transacciones);
-  }, [transacciones]);
-
-  const agregarTransaccion = useCallback((nuevaTransaccionData: Omit<Transaccion, 'id' | 'estado' | 'createdAt' | 'montoPagado'>) => {
-    const nuevaTransaccionObj = addTransaccionService(nuevaTransaccionData);
-    setTransacciones(prevTransacciones => [...prevTransacciones, nuevaTransaccionObj]);
-    return nuevaTransaccionObj;
-  }, []);
-
-  const registrarPago = useCallback((transaccionId: string, montoDelPago: number) => {
-    const transaccionActualizada = registrarPagoEnStorage(transaccionId, montoDelPago);
-    if (transaccionActualizada) {
-        setTransacciones(prev => prev.map(t => t.id === transaccionId ? transaccionActualizada : t));
-    }
-    verificarTransaccionesVencidas(); 
-    return transaccionActualizada;
-  }, []); // Added verificarTransaccionesVencidas to dependency array
-
-
-  const marcarComoTotalmentePagado = useCallback((transaccionId: string) => {
-    const transaccion = transacciones.find(t => t.id === transaccionId);
-    if (transaccion) {
-        const montoRestante = transaccion.monto - transaccion.montoPagado;
-        if (montoRestante > 0) {
-            registrarPago(transaccionId, montoRestante);
-        } else if (transaccion.estado !== 'pagado') { 
-            const transaccionActualizada = registrarPagoEnStorage(transaccionId, 0); 
-            if (transaccionActualizada) {
-                 setTransacciones(prev => prev.map(t => t.id === transaccionId ? transaccionActualizada : t));
-            }
-        }
-    }
-  }, [transacciones, registrarPago]);
-
-
-  const pagarTodasDeudasCliente = useCallback((clienteId: string) => {
-    const transaccionesCliente = transacciones.filter(t => t.clienteId === clienteId && t.estado !== 'pagado');
-    transaccionesCliente.forEach(t => marcarComoTotalmentePagado(t.id));
-  }, [transacciones, marcarComoTotalmentePagado]);
-
-  const eliminarTransaccionesPorCliente = useCallback((clienteId: string) => {
-    setTransacciones(prevTransacciones => prevTransacciones.filter(t => t.clienteId !== clienteId));
-  }, []);
-
-
   const verificarTransaccionesVencidas = useCallback(() => {
     const fechaActual = new Date();
     const primerDiaMesActual = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
@@ -86,6 +40,51 @@ export const useTransacciones = () => {
         return { ...t, estado: nuevoEstado };
       })
     );
+  }, []); 
+
+  useEffect(() => {
+    saveTransaccionesToStorage(transacciones);
+  }, [transacciones]);
+
+  const agregarTransaccion = useCallback((nuevaTransaccionData: Omit<Transaccion, 'id' | 'estado' | 'createdAt' | 'montoPagado'>) => {
+    const nuevaTransaccionObj = addTransaccionService(nuevaTransaccionData);
+    setTransacciones(prevTransacciones => [...prevTransacciones, nuevaTransaccionObj]);
+    return nuevaTransaccionObj;
+  }, []);
+
+  const registrarPago = useCallback((transaccionId: string, montoDelPago: number) => {
+    const transaccionActualizada = registrarPagoEnStorage(transaccionId, montoDelPago);
+    if (transaccionActualizada) {
+        setTransacciones(prev => prev.map(t => t.id === transaccionId ? transaccionActualizada : t));
+    }
+    verificarTransaccionesVencidas(); 
+    return transaccionActualizada;
+  }, [verificarTransaccionesVencidas]); 
+
+
+  const marcarComoTotalmentePagado = useCallback((transaccionId: string) => {
+    const transaccion = transacciones.find(t => t.id === transaccionId);
+    if (transaccion) {
+        const montoRestante = transaccion.monto - transaccion.montoPagado;
+        if (montoRestante > 0) {
+            registrarPago(transaccionId, montoRestante);
+        } else if (transaccion.estado !== 'pagado') { 
+            const transaccionActualizada = registrarPagoEnStorage(transaccionId, 0); 
+            if (transaccionActualizada) {
+                 setTransacciones(prev => prev.map(t => t.id === transaccionId ? transaccionActualizada : t));
+            }
+        }
+    }
+  }, [transacciones, registrarPago]);
+
+
+  const pagarTodasDeudasCliente = useCallback((clienteId: string) => {
+    const transaccionesCliente = transacciones.filter(t => t.clienteId === clienteId && t.estado !== 'pagado');
+    transaccionesCliente.forEach(t => marcarComoTotalmentePagado(t.id));
+  }, [transacciones, marcarComoTotalmentePagado]);
+
+  const eliminarTransaccionesPorCliente = useCallback((clienteId: string) => {
+    setTransacciones(prevTransacciones => prevTransacciones.filter(t => t.clienteId !== clienteId));
   }, []);
 
 
@@ -104,7 +103,7 @@ export const useTransacciones = () => {
 
   return {
     transacciones,
-    setTransacciones,
+    setTransacciones, 
     agregarTransaccion,
     registrarPago, 
     marcarComoTotalmentePagado, 
