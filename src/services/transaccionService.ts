@@ -1,10 +1,10 @@
 export interface Transaccion {
   id: string;
   clienteId: string;
-  monto: number; // Monto original de la transacción
-  montoPagado: number; // Monto que ya ha sido pagado
+  monto: number; 
+  montoPagado: number; 
   descripcion?: string;
-  fecha: string; // YYYY-MM-DD
+  fecha: string; 
   estado: 'activo' | 'vencido' | 'pagado' | 'parcialmente_pagado';
   createdAt: string;
 }
@@ -15,17 +15,15 @@ export const getTransaccionesFromStorage = (): Transaccion[] => {
   try {
     const transaccionesGuardadas = localStorage.getItem(TRANSACCIONES_STORAGE_KEY);
     const parsed = transaccionesGuardadas ? JSON.parse(transaccionesGuardadas) : [];
-    // Ensure montoPagado exists, default to 0 if not
-    // Also ensure all fields of Transaccion are present or have defaults
     return parsed.map((t: Partial<Transaccion>): Transaccion => ({
-        id: t.id || Date.now().toString() + Math.random(), // Provide a fallback id
-        clienteId: t.clienteId || '', // Provide a fallback clienteId
+        id: typeof t.id === 'string' ? t.id : `${Date.now().toString()}-${Math.random().toString(36).substr(2, 9)}`, 
+        clienteId: typeof t.clienteId === 'string' ? t.clienteId : 'unknown_client', 
         monto: typeof t.monto === 'number' ? t.monto : 0,
         montoPagado: typeof t.montoPagado === 'number' ? t.montoPagado : 0,
-        descripcion: t.descripcion,
-        fecha: t.fecha || new Date().toISOString().split('T')[0], // Fallback fecha
-        estado: t.estado || 'activo', // Fallback estado
-        createdAt: t.createdAt || new Date().toISOString(), // Fallback createdAt
+        descripcion: typeof t.descripcion === 'string' ? t.descripcion : undefined,
+        fecha: typeof t.fecha === 'string' ? t.fecha : new Date().toISOString().split('T')[0], 
+        estado: t.estado && ['activo', 'vencido', 'pagado', 'parcialmente_pagado'].includes(t.estado) ? t.estado : 'activo', 
+        createdAt: typeof t.createdAt === 'string' ? t.createdAt : new Date().toISOString(), 
     }));
   } catch (error) {
     console.error("Error parsing transacciones from localStorage", error);
@@ -66,7 +64,7 @@ export const registrarPagoEnStorage = (transaccionId: string, montoDelPago: numb
         return null;
     }
 
-    const transaccion = transacciones[transaccionIndex];
+    const transaccion = { ...transacciones[transaccionIndex] }; 
     const nuevoMontoPagado = transaccion.montoPagado + montoDelPago;
 
     if (nuevoMontoPagado >= transaccion.monto) {
@@ -85,4 +83,10 @@ export const registrarPagoEnStorage = (transaccionId: string, montoDelPago: numb
     transacciones[transaccionIndex] = transaccion;
     saveTransaccionesToStorage(transacciones);
     return transaccion;
+};
+
+export const deleteTransaccionFromStorage = (transaccionId: string): void => {
+  let transacciones = getTransaccionesFromStorage();
+  transacciones = transacciones.filter(t => t.id !== transaccionId);
+  saveTransaccionesToStorage(transacciones);
 };

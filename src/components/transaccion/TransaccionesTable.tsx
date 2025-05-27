@@ -1,9 +1,11 @@
 import React from 'react';
 import type { Transaccion } from '../../services/transaccionService';
+import { Trash2 as TrashIcon } from 'lucide-react'; 
 
 interface TransaccionesTableProps {
-  transacciones: Transaccion[]; // This will be the paginated list
+  transacciones: Transaccion[]; 
   onAbrirModalPago: (transaccion: Transaccion) => void; 
+  onEliminarTransaccion: (transaccion: Transaccion) => void; 
   clienteNombre: string; 
 }
 
@@ -52,12 +54,12 @@ const agruparTransaccionesPorMes = (transacciones: Transaccion[]): GrupoTransacc
 };
 
 
-export const TransaccionesTable: React.FC<TransaccionesTableProps> = ({ transacciones, onAbrirModalPago, clienteNombre }) => {
+export const TransaccionesTable: React.FC<TransaccionesTableProps> = ({ transacciones, onAbrirModalPago, onEliminarTransaccion, clienteNombre }) => {
   if (transacciones.length === 0) {
     return <p className="text-gray-500 text-center py-6">No hay transacciones para mostrar en esta página para {clienteNombre}.</p>;
   }
 
-  const grupos = agruparTransaccionesPorMes(transacciones); // Groups only the current page of transactions
+  const grupos = agruparTransaccionesPorMes(transacciones); 
   const totalGeneralRestantePagina = transacciones.reduce((sum, t) => sum + (t.monto - t.montoPagado), 0);
 
   const getEstadoClass = (estado: Transaccion['estado']): string => {
@@ -88,6 +90,7 @@ export const TransaccionesTable: React.FC<TransaccionesTableProps> = ({ transacc
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="p-3 text-left font-medium text-gray-600 w-12"></th> {/* Columna para botón eliminar */}
                   <th className="p-3 text-left font-medium text-gray-600">Fecha</th>
                   <th className="p-3 text-left font-medium text-gray-600">Descripción</th>
                   <th className="p-3 text-right font-medium text-gray-600">Original</th>
@@ -102,6 +105,15 @@ export const TransaccionesTable: React.FC<TransaccionesTableProps> = ({ transacc
                   const restante = transaccion.monto - transaccion.montoPagado;
                   return (
                     <tr key={transaccion.id} className="border-t border-gray-200 hover:bg-gray-50">
+                       <td className="p-3 text-center">
+                        <button
+                            onClick={() => onEliminarTransaccion(transaccion)}
+                            className="p-1.5 text-red-600 hover:text-red-700 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                            title="Eliminar Transacción"
+                        >
+                            <TrashIcon size={16} />
+                        </button>
+                      </td>
                       <td className="p-3 whitespace-nowrap text-gray-700">
                         {new Date(transaccion.fecha + 'T00:00:00').toLocaleDateString('es-AR', {day: '2-digit', month: '2-digit', year: 'numeric'})}
                       </td>
@@ -135,11 +147,11 @@ export const TransaccionesTable: React.FC<TransaccionesTableProps> = ({ transacc
                   );
                 })}
                 <tr className="bg-gray-100 font-semibold text-gray-700">
-                  <td colSpan={2} className="p-3 text-right">Subtotales del mes:</td>
+                  <td colSpan={3} className="p-3 text-right">Subtotales del mes:</td> {/* Adjusted colspan */}
                   <td className="p-3 text-right">${grupo.subtotalOriginal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   <td className="p-3 text-right text-green-700">${grupo.subtotalPagado.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   <td className="p-3 text-right text-red-700">${grupo.subtotalRestante.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  <td colSpan={2}></td>
+                  <td colSpan={2}></td> {/* Adjusted colspan */}
                 </tr>
               </tbody>
             </table>

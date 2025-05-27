@@ -1,26 +1,28 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'; 
 import { useClientes } from '../hooks/useClientes';
 import { useTransacciones } from '../hooks/useTransacciones';
 import { ClienteForm } from '../components/cliente/ClienteForm';
 import { ClienteList } from '../components/cliente/ClienteList';
 import { TransaccionForm } from '../components/transaccion/TransaccionForm';
 import { TransaccionesTable } from '../components/transaccion/TransaccionesTable';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 import { EditClienteModal } from '../components/cliente/EditClienteModal'; 
 import { PaymentModal } from '../components/transaccion/PaymentModal'; 
 import { PaginationControls } from '../components/ui/PaginationControls'; 
 import type { Cliente } from '../services/clienteService';
 import type { Transaccion } from '../services/transaccionService';
-import { Upload, Download } from 'lucide-react'; 
+import { Upload, Download, BarChart3 } from 'lucide-react'; 
 
 type FiltroEstado = 'todos' | 'activo' | 'vencido' | 'pagado' | 'parcialmente_pagado'; 
 
-const CLIENTES_PER_PAGE = 15; 
-const TRANSACCIONES_PER_PAGE = 15; 
+interface GestorCuentasPageProps { 
+  onNavigateToReportes: () => void;
+}
 
-export const GestorCuentasPage: React.FC = () => {
+const CLIENTES_PER_PAGE = 10; 
+const TRANSACCIONES_PER_PAGE = 25; 
+
+export const GestorCuentasPage: React.FC<GestorCuentasPageProps> = ({ onNavigateToReportes }) => { 
   const {
     clientes, 
     setClientes,
@@ -40,9 +42,9 @@ export const GestorCuentasPage: React.FC = () => {
     setTransacciones,
     agregarTransaccion: agregarNuevaTransaccionHook,
     registrarPago: registrarPagoHook, 
-    marcarComoTotalmentePagado, 
     pagarTodasDeudasCliente: pagarTodasDeudasClienteHook,
     eliminarTransaccionesPorCliente, 
+    eliminarTransaccion: eliminarTransaccionHook, 
     getTransaccionesByCliente,
   } = useTransacciones();
 
@@ -63,6 +65,10 @@ export const GestorCuentasPage: React.FC = () => {
   const [showConfirmacionEliminarClienteModal, setShowConfirmacionEliminarClienteModal] = useState(false);
   const [clienteParaEliminar, setClienteParaEliminar] = useState<Cliente | null>(null);
 
+  const [showConfirmacionEliminarTransaccionModal, setShowConfirmacionEliminarTransaccionModal] = useState(false); 
+  const [transaccionParaEliminar, setTransaccionParaEliminar] = useState<Transaccion | null>(null); 
+
+
   const [currentPageClientes, setCurrentPageClientes] = useState(1);
   const [currentPageTransacciones, setCurrentPageTransacciones] = useState(1);
 
@@ -79,6 +85,10 @@ export const GestorCuentasPage: React.FC = () => {
     const indexOfFirstCliente = indexOfLastCliente - CLIENTES_PER_PAGE;
     return listaClientesFiltradaYOrdenada.slice(indexOfFirstCliente, indexOfLastCliente);
   }, [listaClientesFiltradaYOrdenada, currentPageClientes]);
+
+  const stableCalculateDeuda = useCallback((clienteId: string) => {
+    return calcularTotalDeuda(clienteId, allTransacciones);
+  }, [calcularTotalDeuda, allTransacciones]);
 
 
   const handleAgregarCliente = (apellido: string, nombre: string, telefono?: string) => { 
@@ -136,6 +146,24 @@ export const GestorCuentasPage: React.FC = () => {
     });
     setMostrarFormularioTransaccion(false); 
   };
+
+  const handleAbrirModalEliminarTransaccion = (transaccion: Transaccion) => {
+    setTransaccionParaEliminar(transaccion);
+    setShowConfirmacionEliminarTransaccionModal(true);
+  };
+
+  const handleCerrarModalEliminarTransaccion = () => {
+    setTransaccionParaEliminar(null);
+    setShowConfirmacionEliminarTransaccionModal(false);
+  };
+
+  const handleConfirmarEliminarTransaccion = () => {
+    if (transaccionParaEliminar) {
+        eliminarTransaccionHook(transaccionParaEliminar.id);
+    }
+    handleCerrarModalEliminarTransaccion();
+  };
+
 
   const transaccionesClienteSeleccionado = useMemo(() => {
     if (!clienteSeleccionado) return [];
@@ -244,8 +272,8 @@ export const GestorCuentasPage: React.FC = () => {
   const handleExportarDatos = () => {
     try {
         const datosParaExportar = {
-            clientes: clientes,
-            transacciones: allTransacciones,
+            clientes: clientes, 
+            transacciones: allTransacciones, 
         };
         const jsonString = JSON.stringify(datosParaExportar, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
@@ -304,13 +332,9 @@ export const GestorCuentasPage: React.FC = () => {
 
 
   return (
-    <div className="h-full w-full flex flex-col relative"> 
-      <div className="fixed inset-0 -z-10 h-screen w-screen bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
-      <Header title="Sistema de Cuentas Corrientes Carnicuenta" />
-      <main className="container mx-auto p-4 flex-grow w-full z-10"> 
-        
+    <> 
         <div className="mb-6 p-4 bg-slate-50 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">Gestión de Datos (LocalStorage)</h3>
+            <h3 className="text-lg font-semibold text-gray-700 mb-3">Herramientas</h3>
             <div className="flex flex-col sm:flex-row gap-3">
                 <button
                     onClick={handleExportarDatos}
@@ -331,9 +355,15 @@ export const GestorCuentasPage: React.FC = () => {
                     onChange={handleImportarDatos}
                     className="hidden"
                 />
+                 <button
+                    onClick={onNavigateToReportes} 
+                    className="flex items-center justify-center gap-2 bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition-colors text-sm"
+                >
+                    <BarChart3 size={18}/> Ver Reportes
+                </button>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-                Exporta tus datos actuales a un archivo JSON o importa datos desde un archivo JSON previamente guardado. La importación sobrescribirá los datos existentes.
+                Exporta o importa tus datos. La importación sobrescribirá los datos actuales.
             </p>
         </div>
 
@@ -385,7 +415,7 @@ export const GestorCuentasPage: React.FC = () => {
                         setFiltroEstado('todos');
                         setCurrentPageTransacciones(1); 
                     }}
-                    calculateDeuda={calcularTotalDeuda}
+                    calculateDeuda={stableCalculateDeuda} 
                     allTransacciones={allTransacciones} 
                     onEditCliente={handleAbrirModalEditarCliente} 
                     onDeleteCliente={handleAbrirModalEliminarCliente} 
@@ -439,6 +469,7 @@ export const GestorCuentasPage: React.FC = () => {
                     <TransaccionesTable
                     transacciones={transaccionesPaginadas} 
                     onAbrirModalPago={handleAbrirModalPago}
+                    onEliminarTransaccion={handleAbrirModalEliminarTransaccion} 
                     clienteNombre={`${clienteSeleccionado.apellido}, ${clienteSeleccionado.nombre}`}
                     />
                 </div>
@@ -459,8 +490,6 @@ export const GestorCuentasPage: React.FC = () => {
             )}
           </div>
         </div>
-      </main>
-      <Footer year={new Date().getFullYear()} />
       
       {mostrarFormularioCliente && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
@@ -505,7 +534,7 @@ export const GestorCuentasPage: React.FC = () => {
 
       <ConfirmationModal
         isOpen={showConfirmacionEliminarClienteModal}
-        title="Confirmar Eliminación"
+        title="Confirmar Eliminación de Cliente"
         message={`¿Estás seguro de que deseas eliminar al cliente ${clienteParaEliminar?.apellido}, ${clienteParaEliminar?.nombre}? Esta acción también eliminará todas sus transacciones y no se puede deshacer.`}
         onConfirm={handleConfirmarEliminarCliente}
         onCancel={handleCerrarModalEliminarCliente}
@@ -528,6 +557,16 @@ export const GestorCuentasPage: React.FC = () => {
             </div>
         )}
       </ConfirmationModal>
-    </div>
+
+      <ConfirmationModal
+        isOpen={showConfirmacionEliminarTransaccionModal}
+        title="Confirmar Eliminación de Transacción"
+        message={`¿Estás seguro de que deseas eliminar esta transacción? (${transaccionParaEliminar?.descripcion || 'Gasto del ' + (transaccionParaEliminar?.fecha ? new Date(transaccionParaEliminar.fecha + 'T00:00:00').toLocaleDateString('es-AR') : '') } por $${transaccionParaEliminar?.monto.toLocaleString('es-AR')}) Esta acción no se puede deshacer.`}
+        onConfirm={handleConfirmarEliminarTransaccion}
+        onCancel={handleCerrarModalEliminarTransaccion}
+        confirmText="Sí, Eliminar"
+        cancelText="No, Cancelar"
+      />
+    </> 
   );
 };

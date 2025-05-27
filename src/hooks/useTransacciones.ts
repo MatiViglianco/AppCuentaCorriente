@@ -4,7 +4,8 @@ import {
   getTransaccionesFromStorage,
   saveTransaccionesToStorage,
   addTransaccionToStorage as addTransaccionService, 
-  registrarPagoEnStorage 
+  registrarPagoEnStorage,
+  deleteTransaccionFromStorage // Added
 } from '../services/transaccionService';
 
 export const useTransacciones = () => {
@@ -87,6 +88,11 @@ export const useTransacciones = () => {
     setTransacciones(prevTransacciones => prevTransacciones.filter(t => t.clienteId !== clienteId));
   }, []);
 
+  const eliminarTransaccion = useCallback((transaccionId: string) => {
+    deleteTransaccionFromStorage(transaccionId);
+    setTransacciones(prevTransacciones => prevTransacciones.filter(t => t.id !== transaccionId));
+  }, []);
+
 
   useEffect(() => {
     verificarTransaccionesVencidas();
@@ -109,6 +115,7 @@ export const useTransacciones = () => {
     marcarComoTotalmentePagado, 
     pagarTodasDeudasCliente,
     eliminarTransaccionesPorCliente,
+    eliminarTransaccion, // Added
     verificarTransaccionesVencidas,
     getTransaccionesByCliente,
   };
