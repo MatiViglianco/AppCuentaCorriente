@@ -15,6 +15,7 @@ export const getTransaccionesFromStorage = (): Transaccion[] => {
   try {
     const transaccionesGuardadas = localStorage.getItem(TRANSACCIONES_STORAGE_KEY);
     const parsed = transaccionesGuardadas ? JSON.parse(transaccionesGuardadas) : [];
+    // Realiza una validación y asignación de valores por defecto más robusta
     return parsed.map((t: Partial<Transaccion>): Transaccion => ({
         id: typeof t.id === 'string' ? t.id : `${Date.now().toString()}-${Math.random().toString(36).substr(2, 9)}`, 
         clienteId: typeof t.clienteId === 'string' ? t.clienteId : 'unknown_client', 
@@ -84,6 +85,48 @@ export const registrarPagoEnStorage = (transaccionId: string, montoDelPago: numb
     saveTransaccionesToStorage(transacciones);
     return transaccion;
 };
+
+// --- Nueva función de servicio ---
+export const registrarPagoParcialTotalEnStorage = (clienteId: string, montoTotalDelPago: number): Transaccion[] | null => {
+  if (montoTotalDelPago <= 0) return null;
+
+  const todasLasTransacciones = getTransaccionesFromStorage();
+  let montoRestanteDelPago = montoTotalDelPago;
+
+  // Filtrar y ordenar las deudas pendientes del cliente (de la más antigua a la más nueva)
+  const deudasPendientes = todasLasTransacciones
+    .filter(t => t.clienteId === clienteId && t.estado !== 'pagado')
+    .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+
+  // Aplicar el pago a las deudas en orden
+  for (const transaccion of deudasPendientes) {
+    if (montoRestanteDelPago <= 0) break;
+
+    const deudaTransaccion = transaccion.monto - transaccion.montoPagado;
+    const pagoParaEstaTransaccion = Math.min(montoRestanteDelPago, deudaTransaccion);
+
+    transaccion.montoPagado += pagoParaEstaTransaccion;
+    montoRestanteDelPago -= pagoParaEstaTransaccion;
+
+    // Actualizar estado de la transacción
+    if (transaccion.montoPagado >= transaccion.monto) {
+      transaccion.montoPagado = transaccion.monto; // Asegurar que no se pague de más
+      transaccion.estado = 'pagado';
+    } else {
+      transaccion.estado = 'parcialmente_pagado';
+    }
+
+    // Actualizar la transacción en la lista principal
+    const indexEnListaPrincipal = todasLasTransacciones.findIndex(t => t.id === transaccion.id);
+    if (indexEnListaPrincipal !== -1) {
+      todasLasTransacciones[indexEnListaPrincipal] = transaccion;
+    }
+  }
+
+  saveTransaccionesToStorage(todasLasTransacciones);
+  return todasLasTransacciones;
+};
+// --- Fin de la nueva función ---
 
 export const deleteTransaccionFromStorage = (transaccionId: string): void => {
   let transacciones = getTransaccionesFromStorage();

@@ -5,7 +5,8 @@ import {
   saveTransaccionesToStorage,
   addTransaccionToStorage as addTransaccionService, 
   registrarPagoEnStorage,
-  deleteTransaccionFromStorage // Added
+  registrarPagoParcialTotalEnStorage, // <-- Importar nueva función
+  deleteTransaccionFromStorage
 } from '../services/transaccionService';
 
 export const useTransacciones = () => {
@@ -62,6 +63,16 @@ export const useTransacciones = () => {
     return transaccionActualizada;
   }, [verificarTransaccionesVencidas]); 
 
+  // --- Nueva función en el hook ---
+  const registrarPagoParcialTotal = useCallback((clienteId: string, montoDelPago: number) => {
+    const transaccionesActualizadas = registrarPagoParcialTotalEnStorage(clienteId, montoDelPago);
+    if (transaccionesActualizadas) {
+      setTransacciones(transaccionesActualizadas);
+      verificarTransaccionesVencidas();
+    }
+    return transaccionesActualizadas;
+  }, [verificarTransaccionesVencidas]);
+  // --- Fin de la nueva función ---
 
   const marcarComoTotalmentePagado = useCallback((transaccionId: string) => {
     const transaccion = transacciones.find(t => t.id === transaccionId);
@@ -112,10 +123,11 @@ export const useTransacciones = () => {
     setTransacciones, 
     agregarTransaccion,
     registrarPago, 
+    registrarPagoParcialTotal, // <-- Exportar nueva función
     marcarComoTotalmentePagado, 
     pagarTodasDeudasCliente,
     eliminarTransaccionesPorCliente,
-    eliminarTransaccion, // Added
+    eliminarTransaccion,
     verificarTransaccionesVencidas,
     getTransaccionesByCliente,
   };
