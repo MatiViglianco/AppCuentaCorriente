@@ -5,15 +5,18 @@ interface PaymentModalProps {
   isOpen: boolean;
   transaction: Transaccion | null;
   onClose: () => void;
-  onConfirmPayment: (transactionId: string, amount: number) => void;
+  onConfirmPayment: (transactionId: string, amount: number, paymentDate: string) => void;
 }
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, transaction, onClose, onConfirmPayment }) => {
   const [paymentAmount, setPaymentAmount] = useState('');
+  // Estado para la fecha del pago, inicializado con la fecha actual
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     if (transaction) {
       setPaymentAmount(''); 
+      setPaymentDate(new Date().toISOString().split('T')[0]); // Resetea la fecha al abrir
     }
   }, [transaction, isOpen]);
 
@@ -41,12 +44,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, transaction,
       alert('Por favor, ingrese un monto de pago válido.');
       return;
     }
-    onConfirmPayment(transaction.id, amountToPay);
+    if (!paymentDate) {
+      alert('Por favor, seleccione una fecha para el pago.');
+      return;
+    }
+    onConfirmPayment(transaction.id, amountToPay, paymentDate);
     onClose();
   };
   
   const handlePayFullRemaining = () => {
-    onConfirmPayment(transaction.id, remainingAmount);
+    if (!paymentDate) {
+      alert('Por favor, seleccione una fecha para el pago.');
+      return;
+    }
+    onConfirmPayment(transaction.id, remainingAmount, paymentDate);
     onClose();
   };
 
@@ -57,28 +68,41 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, transaction,
         <h3 className="text-xl font-bold mb-4 text-gray-800">Registrar Pago</h3>
         
         <div className="mb-4 space-y-1 text-sm text-gray-700">
-          <p><strong>Cliente:</strong> {transaction.clienteId} (ID)</p> 
           <p><strong>Descripción:</strong> {transaction.descripcion || '-'}</p>
           <p><strong>Monto Original:</strong> ${transaction.monto.toLocaleString('es-AR', {minimumFractionDigits: 2})}</p>
           <p><strong>Monto Pagado:</strong> ${transaction.montoPagado.toLocaleString('es-AR', {minimumFractionDigits: 2})}</p>
           <p className="font-semibold"><strong>Monto Restante:</strong> ${remainingAmount.toLocaleString('es-AR', {minimumFractionDigits: 2})}</p>
         </div>
 
-        <div className="mb-4">
-          <label htmlFor="paymentAmount" className="block text-sm font-medium text-gray-700 mb-1">
-            Monto a Pagar Ahora:
-          </label>
-          <input
-            type="number"
-            id="paymentAmount"
-            value={paymentAmount}
-            onChange={handlePaymentInputChange}
-            className="w-full p-2 bg-gray-100 border border-gray-300 rounded shadow-sm focus:ring-red-400 focus:border-red-400 text-gray-700"
-            placeholder={`Max: ${remainingAmount.toLocaleString('es-AR', {minimumFractionDigits: 2})}`}
-            max={remainingAmount}
-            step="0.01"
-            min="0.01"
-          />
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label htmlFor="paymentAmount" className="block text-sm font-medium text-gray-700 mb-1">
+              Monto a Pagar:
+            </label>
+            <input
+              type="number"
+              id="paymentAmount"
+              value={paymentAmount}
+              onChange={handlePaymentInputChange}
+              className="w-full p-2 bg-gray-100 border border-gray-300 rounded shadow-sm focus:ring-red-400 focus:border-red-400 text-gray-700"
+              placeholder={`Max: ${remainingAmount.toLocaleString('es-AR', {minimumFractionDigits: 2})}`}
+              max={remainingAmount}
+              step="0.01"
+              min="0.01"
+            />
+          </div>
+          <div>
+            <label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha del Pago:
+            </label>
+            <input
+              type="date"
+              id="paymentDate"
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
+              className="w-full p-2 bg-gray-100 border border-gray-300 rounded shadow-sm focus:ring-red-400 focus:border-red-400 text-gray-700"
+            />
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
@@ -93,7 +117,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, transaction,
                 onClick={handlePayFullRemaining}
                 className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 w-full sm:w-auto"
             >
-                Pagar Totalidad Restante (${remainingAmount.toLocaleString('es-AR', {minimumFractionDigits: 2})})
+                Pagar Totalidad Restante
             </button>
           )}
           <button
@@ -101,7 +125,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, transaction,
             disabled={parseFloat(paymentAmount) <= 0 || parseFloat(paymentAmount) > remainingAmount || isNaN(parseFloat(paymentAmount))}
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 disabled:opacity-50 w-full sm:w-auto"
           >
-            Registrar Pago Ingresado
+            Registrar Pago
           </button>
         </div>
       </div>

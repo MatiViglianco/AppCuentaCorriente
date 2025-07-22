@@ -1,3 +1,9 @@
+// Define la estructura de un pago individual
+export interface Pago {
+  fecha: string; // Fecha en formato YYYY-MM-DD
+  monto: number;
+}
+
 export interface Transaccion {
   id: string;
   clienteId: string;
@@ -7,6 +13,7 @@ export interface Transaccion {
   fecha: string; 
   estado: 'activo' | 'vencido' | 'pagado' | 'parcialmente_pagado';
   createdAt: string;
+  pagos: Pago[]; // Array para almacenar el historial de pagos
 }
 
 const TRANSACCIONES_STORAGE_KEY = 'transacciones';
@@ -15,7 +22,7 @@ export const getTransaccionesFromStorage = (): Transaccion[] => {
   try {
     const transaccionesGuardadas = localStorage.getItem(TRANSACCIONES_STORAGE_KEY);
     const parsed = transaccionesGuardadas ? JSON.parse(transaccionesGuardadas) : [];
-    // Realiza una validación y asignación de valores por defecto más robusta
+    // Asegura que todas las transacciones tengan el campo 'pagos'
     return parsed.map((t: Partial<Transaccion>): Transaccion => ({
         id: typeof t.id === 'string' ? t.id : `${Date.now().toString()}-${Math.random().toString(36).substr(2, 9)}`, 
         clienteId: typeof t.clienteId === 'string' ? t.clienteId : 'unknown_client', 
@@ -25,6 +32,7 @@ export const getTransaccionesFromStorage = (): Transaccion[] => {
         fecha: typeof t.fecha === 'string' ? t.fecha : new Date().toISOString().split('T')[0], 
         estado: t.estado && ['activo', 'vencido', 'pagado', 'parcialmente_pagado'].includes(t.estado) ? t.estado : 'activo', 
         createdAt: typeof t.createdAt === 'string' ? t.createdAt : new Date().toISOString(), 
+        pagos: Array.isArray(t.pagos) ? t.pagos : [], // Inicializa 'pagos' si no existe
     }));
   } catch (error) {
     console.error("Error parsing transacciones from localStorage", error);
@@ -41,7 +49,7 @@ export const saveTransaccionesToStorage = (transacciones: Transaccion[]): void =
 };
 
 export const addTransaccionToStorage = (
-  transaccionData: Omit<Transaccion, 'id' | 'estado' | 'createdAt' | 'montoPagado'>
+  transaccionData: Omit<Transaccion, 'id' | 'estado' | 'createdAt' | 'montoPagado' | 'pagos'>
 ): Transaccion => {
   const transacciones = getTransaccionesFromStorage();
   const nuevaTransaccion: Transaccion = {
@@ -50,13 +58,15 @@ export const addTransaccionToStorage = (
     montoPagado: 0,
     estado: 'activo', 
     createdAt: new Date().toISOString(),
+    pagos: [], // Inicializa el historial de pagos vacío
   };
   const updatedTransacciones = [...transacciones, nuevaTransaccion];
   saveTransaccionesToStorage(updatedTransacciones);
   return nuevaTransaccion;
 };
 
-export const registrarPagoEnStorage = (transaccionId: string, montoDelPago: number): Transaccion | null => {
+// Ahora acepta la fecha del pago como argumento
+export const registrarPagoEnStorage = (transaccionId: string, montoDelPago: number, fechaPago: string): Transaccion | null => {
     const transacciones = getTransaccionesFromStorage();
     const transaccionIndex = transacciones.findIndex(t => t.id === transaccionId);
 
@@ -66,19 +76,19 @@ export const registrarPagoEnStorage = (transaccionId: string, montoDelPago: numb
     }
 
     const transaccion = { ...transacciones[transaccionIndex] }; 
-    const nuevoMontoPagado = transaccion.montoPagado + montoDelPago;
+    
+    // Añade el nuevo pago al historial
+    transaccion.pagos.push({ fecha: fechaPago, monto: montoDelPago });
+
+    // Recalcula el monto total pagado
+    const nuevoMontoPagado = transaccion.pagos.reduce((total, pago) => total + pago.monto, 0);
 
     if (nuevoMontoPagado >= transaccion.monto) {
         transaccion.montoPagado = transaccion.monto;
         transaccion.estado = 'pagado';
-    } else if (nuevoMontoPagado > 0) {
+    } else {
         transaccion.montoPagado = nuevoMontoPagado;
         transaccion.estado = 'parcialmente_pagado';
-    } else {
-        transaccion.montoPagado = Math.max(0, nuevoMontoPagado); 
-        if (transaccion.montoPagado === 0 && transaccion.estado !== 'vencido') {
-             transaccion.estado = 'activo';
-        }
     }
     
     transacciones[transaccionIndex] = transaccion;
@@ -86,37 +96,35 @@ export const registrarPagoEnStorage = (transaccionId: string, montoDelPago: numb
     return transaccion;
 };
 
-// --- Nueva función de servicio ---
-export const registrarPagoParcialTotalEnStorage = (clienteId: string, montoTotalDelPago: number): Transaccion[] | null => {
+// Ahora acepta la fecha del pago como argumento
+export const registrarPagoParcialTotalEnStorage = (clienteId: string, montoTotalDelPago: number, fechaPago: string): Transaccion[] | null => {
   if (montoTotalDelPago <= 0) return null;
 
   const todasLasTransacciones = getTransaccionesFromStorage();
   let montoRestanteDelPago = montoTotalDelPago;
 
-  // Filtrar y ordenar las deudas pendientes del cliente (de la más antigua a la más nueva)
   const deudasPendientes = todasLasTransacciones
     .filter(t => t.clienteId === clienteId && t.estado !== 'pagado')
     .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
 
-  // Aplicar el pago a las deudas en orden
   for (const transaccion of deudasPendientes) {
     if (montoRestanteDelPago <= 0) break;
 
     const deudaTransaccion = transaccion.monto - transaccion.montoPagado;
     const pagoParaEstaTransaccion = Math.min(montoRestanteDelPago, deudaTransaccion);
 
+    // Registra el pago con su fecha
+    transaccion.pagos.push({ fecha: fechaPago, monto: pagoParaEstaTransaccion });
     transaccion.montoPagado += pagoParaEstaTransaccion;
     montoRestanteDelPago -= pagoParaEstaTransaccion;
 
-    // Actualizar estado de la transacción
     if (transaccion.montoPagado >= transaccion.monto) {
-      transaccion.montoPagado = transaccion.monto; // Asegurar que no se pague de más
+      transaccion.montoPagado = transaccion.monto;
       transaccion.estado = 'pagado';
     } else {
       transaccion.estado = 'parcialmente_pagado';
     }
 
-    // Actualizar la transacción en la lista principal
     const indexEnListaPrincipal = todasLasTransacciones.findIndex(t => t.id === transaccion.id);
     if (indexEnListaPrincipal !== -1) {
       todasLasTransacciones[indexEnListaPrincipal] = transaccion;
@@ -126,7 +134,6 @@ export const registrarPagoParcialTotalEnStorage = (clienteId: string, montoTotal
   saveTransaccionesToStorage(todasLasTransacciones);
   return todasLasTransacciones;
 };
-// --- Fin de la nueva función ---
 
 export const deleteTransaccionFromStorage = (transaccionId: string): void => {
   let transacciones = getTransaccionesFromStorage();

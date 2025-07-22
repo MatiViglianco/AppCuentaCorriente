@@ -17,7 +17,6 @@ type FiltroEstado = 'todos' | 'activo' | 'vencido' | 'pagado' | 'parcialmente_pa
 
 interface GestorCuentasPageProps {
   onNavigateToReportes: () => void;
-  // Recibimos los datos y funciones como props desde App.tsx
   clientesData: ReturnType<typeof useClientes>;
   transaccionesData: ReturnType<typeof useTransacciones>;
 }
@@ -30,7 +29,6 @@ export const GestorCuentasPage: React.FC<GestorCuentasPageProps> = ({
     clientesData,
     transaccionesData 
 }) => {
-  // Desestructuramos los datos y funciones desde las props
   const {
     clientes,
     setClientes,
@@ -79,6 +77,7 @@ export const GestorCuentasPage: React.FC<GestorCuentasPageProps> = ({
 
   const [showPagoParcialTotalModal, setShowPagoParcialTotalModal] = useState(false);
   const [pagoParcialTotalAmount, setPagoParcialTotalAmount] = useState('');
+  const [pagoParcialTotalDate, setPagoParcialTotalDate] = useState(new Date().toISOString().split('T')[0]);
 
   const [currentPageClientes, setCurrentPageClientes] = useState(1);
   const [currentPageTransacciones, setCurrentPageTransacciones] = useState(1);
@@ -209,8 +208,8 @@ export const GestorCuentasPage: React.FC<GestorCuentasPageProps> = ({
     setShowPaymentModal(false);
   };
 
-  const handleConfirmarPago = (transactionId: string, amount: number) => {
-    registrarPagoHook(transactionId, amount);
+  const handleConfirmarPago = (transactionId: string, amount: number, paymentDate: string) => {
+    registrarPagoHook(transactionId, amount, paymentDate);
   };
 
   const handlePagarTodasDeudas = () => {
@@ -244,6 +243,7 @@ export const GestorCuentasPage: React.FC<GestorCuentasPageProps> = ({
 
   const handleAbrirPagoParcialTotalModal = () => {
     if (totalDeudaClienteSeleccionado > 0) {
+      setPagoParcialTotalDate(new Date().toISOString().split('T')[0]);
       setShowPagoParcialTotalModal(true);
     }
   };
@@ -255,15 +255,15 @@ export const GestorCuentasPage: React.FC<GestorCuentasPageProps> = ({
 
   const handleConfirmarPagoParcialTotal = () => {
     const monto = parseFloat(pagoParcialTotalAmount);
-    if (clienteSeleccionado && !isNaN(monto) && monto > 0) {
+    if (clienteSeleccionado && !isNaN(monto) && monto > 0 && pagoParcialTotalDate) {
       if (monto > totalDeudaClienteSeleccionado) {
         alert(`El monto a pagar ($${monto.toLocaleString('es-AR')}) no puede ser mayor a la deuda total ($${totalDeudaClienteSeleccionado.toLocaleString('es-AR')}).`);
         return;
       }
-      registrarPagoParcialTotalHook(clienteSeleccionado.id, monto);
+      registrarPagoParcialTotalHook(clienteSeleccionado.id, monto, pagoParcialTotalDate);
       handleCerrarPagoParcialTotalModal();
     } else {
-      alert('Por favor, ingrese un monto válido.');
+      alert('Por favor, ingrese un monto y una fecha válidos.');
     }
   };
 
@@ -609,27 +609,41 @@ export const GestorCuentasPage: React.FC<GestorCuentasPageProps> = ({
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Ingrese el monto total que el cliente desea pagar. Este monto se aplicará a las deudas más antiguas primero.
+            Ingrese el monto y la fecha del pago. Se aplicará a las deudas más antiguas primero.
           </p>
-          <div>
-            <label htmlFor="pagoParcialTotalInput" className="block text-sm font-medium text-gray-700">
-              Monto a Pagar:
-            </label>
-            <input
-              type="number"
-              id="pagoParcialTotalInput"
-              value={pagoParcialTotalAmount}
-              onChange={(e) => setPagoParcialTotalAmount(e.target.value)}
-              className="w-full p-2 mt-1 bg-gray-100 border border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-700"
-              placeholder="0.00"
-              step="0.01"
-              min="0.01"
-              max={totalDeudaClienteSeleccionado}
-            />
-            <p className="text-xs text-gray-500 mt-1">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="pagoParcialTotalInput" className="block text-sm font-medium text-gray-700">
+                Monto a Pagar:
+              </label>
+              <input
+                type="number"
+                id="pagoParcialTotalInput"
+                value={pagoParcialTotalAmount}
+                onChange={(e) => setPagoParcialTotalAmount(e.target.value)}
+                className="w-full p-2 mt-1 bg-gray-100 border border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+                placeholder="0.00"
+                step="0.01"
+                min="0.01"
+                max={totalDeudaClienteSeleccionado}
+              />
+            </div>
+            <div>
+              <label htmlFor="pagoParcialTotalDate" className="block text-sm font-medium text-gray-700">
+                Fecha del Pago:
+              </label>
+              <input
+                type="date"
+                id="pagoParcialTotalDate"
+                value={pagoParcialTotalDate}
+                onChange={(e) => setPagoParcialTotalDate(e.target.value)}
+                className="w-full p-2 mt-1 bg-gray-100 border border-gray-300 rounded shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+              />
+            </div>
+          </div>
+           <p className="text-xs text-gray-500 mt-1">
               Deuda total del cliente: ${totalDeudaClienteSeleccionado.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
             </p>
-          </div>
         </div>
       </ConfirmationModal>
 

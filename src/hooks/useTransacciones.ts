@@ -5,7 +5,7 @@ import {
   saveTransaccionesToStorage,
   addTransaccionToStorage as addTransaccionService, 
   registrarPagoEnStorage,
-  registrarPagoParcialTotalEnStorage, // <-- Importar nueva función
+  registrarPagoParcialTotalEnStorage,
   deleteTransaccionFromStorage
 } from '../services/transaccionService';
 
@@ -48,14 +48,15 @@ export const useTransacciones = () => {
     saveTransaccionesToStorage(transacciones);
   }, [transacciones]);
 
-  const agregarTransaccion = useCallback((nuevaTransaccionData: Omit<Transaccion, 'id' | 'estado' | 'createdAt' | 'montoPagado'>) => {
+  const agregarTransaccion = useCallback((nuevaTransaccionData: Omit<Transaccion, 'id' | 'estado' | 'createdAt' | 'montoPagado' | 'pagos'>) => {
     const nuevaTransaccionObj = addTransaccionService(nuevaTransaccionData);
     setTransacciones(prevTransacciones => [...prevTransacciones, nuevaTransaccionObj]);
     return nuevaTransaccionObj;
   }, []);
 
-  const registrarPago = useCallback((transaccionId: string, montoDelPago: number) => {
-    const transaccionActualizada = registrarPagoEnStorage(transaccionId, montoDelPago);
+  // Ahora acepta la fecha del pago
+  const registrarPago = useCallback((transaccionId: string, montoDelPago: number, fechaPago: string) => {
+    const transaccionActualizada = registrarPagoEnStorage(transaccionId, montoDelPago, fechaPago);
     if (transaccionActualizada) {
         setTransacciones(prev => prev.map(t => t.id === transaccionId ? transaccionActualizada : t));
     }
@@ -63,25 +64,25 @@ export const useTransacciones = () => {
     return transaccionActualizada;
   }, [verificarTransaccionesVencidas]); 
 
-  // --- Nueva función en el hook ---
-  const registrarPagoParcialTotal = useCallback((clienteId: string, montoDelPago: number) => {
-    const transaccionesActualizadas = registrarPagoParcialTotalEnStorage(clienteId, montoDelPago);
+  // Ahora acepta la fecha del pago
+  const registrarPagoParcialTotal = useCallback((clienteId: string, montoDelPago: number, fechaPago: string) => {
+    const transaccionesActualizadas = registrarPagoParcialTotalEnStorage(clienteId, montoDelPago, fechaPago);
     if (transaccionesActualizadas) {
       setTransacciones(transaccionesActualizadas);
       verificarTransaccionesVencidas();
     }
     return transaccionesActualizadas;
   }, [verificarTransaccionesVencidas]);
-  // --- Fin de la nueva función ---
 
   const marcarComoTotalmentePagado = useCallback((transaccionId: string) => {
     const transaccion = transacciones.find(t => t.id === transaccionId);
     if (transaccion) {
         const montoRestante = transaccion.monto - transaccion.montoPagado;
+        const hoy = new Date().toISOString().split('T')[0];
         if (montoRestante > 0) {
-            registrarPago(transaccionId, montoRestante);
+            registrarPago(transaccionId, montoRestante, hoy);
         } else if (transaccion.estado !== 'pagado') { 
-            const transaccionActualizada = registrarPagoEnStorage(transaccionId, 0); 
+            const transaccionActualizada = registrarPagoEnStorage(transaccionId, 0, hoy); 
             if (transaccionActualizada) {
                  setTransacciones(prev => prev.map(t => t.id === transaccionId ? transaccionActualizada : t));
             }
@@ -123,7 +124,7 @@ export const useTransacciones = () => {
     setTransacciones, 
     agregarTransaccion,
     registrarPago, 
-    registrarPagoParcialTotal, // <-- Exportar nueva función
+    registrarPagoParcialTotal,
     marcarComoTotalmentePagado, 
     pagarTodasDeudasCliente,
     eliminarTransaccionesPorCliente,

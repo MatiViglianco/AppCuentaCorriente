@@ -2,7 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
-/* You can add global custom styles here if needed */
+/* Estilos personalizados para la barra de desplazamiento */
+::-webkit-scrollbar {
+  width: 8px; /* Ancho de la barra */
+  height: 8px; /* Alto de la barra para scroll horizontal */
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Color del fondo de la barra */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db; /* Color del "pulgar" o la parte móvil */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af; /* Color del "pulgar" al pasar el mouse */
+}
+
+
+/* Estilos globales previos */
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
@@ -12,9 +33,9 @@ body {
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Se elimina color-scheme para evitar que el navegador fuerce estilos oscuros */
+  color: #213547;
+  background-color: #ffffff;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -50,7 +71,7 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #f9f9f9;
   cursor: pointer;
   transition: border-color 0.25s;
 }
@@ -62,15 +83,4 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
+/* Se eliminan los estilos @media (prefers-color-scheme: light) porque ya están definidos en :root */
